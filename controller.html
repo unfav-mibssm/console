@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a12"><title>Mibs Console — Controller</title>
+<style>
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+:root{--c:#00f5ff}
+html,body{background:#0a0a12;color:#fff;font:700 18px system-ui,sans-serif}
+body{height:100dvh;width:100vw;overflow:hidden;position:fixed;inset:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#join,#app{height:100%;display:flex;flex-direction:column;gap:14px;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#join{justify-content:center}
+#join h1{text-align:center;color:#00f5ff;text-shadow:0 0 18px #00f5ff;letter-spacing:4px}
+input{font:inherit;padding:16px;border-radius:12px;border:2px solid #334;background:#12121e;color:#fff;text-align:center;user-select:text;-webkit-user-select:text;touch-action:auto}
+#room{text-transform:uppercase;letter-spacing:12px;font-size:28px}
+#err{color:#ff5470;min-height:1.2em;text-align:center}
+.top{display:flex;justify-content:space-between;align-items:center;color:var(--c)}
+#view{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
+.card{padding:20px;border:2px solid var(--c);border-radius:16px;text-align:center;background:#11111c}
+.card h1{color:var(--c);text-shadow:0 0 14px var(--c)}
+.card p{font-weight:400;font-size:15px;margin-top:6px}
+.row{display:flex;gap:14px}.row .b{flex:1}
+.b{font:inherit;font-weight:900;color:var(--c);background:transparent;border:3px solid var(--c);border-radius:18px;padding:18px;touch-action:none;box-shadow:0 0 20px color-mix(in srgb,var(--c) 40%,transparent)}
+.b.on{background:var(--c);color:#0a0a12}
+.b:disabled{opacity:.3}
+.go{flex:1;background:#00ff88;border-color:#00ff88;color:#022;font-size:30px;box-shadow:0 0 24px #00ff8866}
+#go{background:var(--c);color:#0a0a12;border-color:var(--c)}
+.small{padding:6px 12px;font-size:14px;border-width:2px;border-radius:10px}
+.pad{flex:1;position:relative;display:flex;gap:12px;min-height:0}
+.pad .b{flex:1;font-size:28px}
+.single-button .b{font-size:52px}
+.dpad-fire{display:grid;grid-template-columns:repeat(3,1fr) 1.5fr;grid-template-rows:repeat(3,1fr)}
+.dpad-fire [data-k=up]{grid-area:1/2}.dpad-fire [data-k=left]{grid-area:2/1}.dpad-fire [data-k=right]{grid-area:2/3}.dpad-fire [data-k=down]{grid-area:3/2}
+.dpad-fire [data-k=btnA]{grid-area:1/4/4/5}
+</style></head><body>
+<div id="join">
+  <h1>MIBS CONSOLE</h1>
+  <input id="room" maxlength="4" placeholder="ROOM" autocapitalize="characters" autocomplete="off">
+  <input id="name" maxlength="12" placeholder="Your nickname" autocomplete="off">
+  <button class="b" id="go">JOIN GAME</button>
+  <div id="err"></div>
+</div>
+<div id="app" hidden>
+  <div class="top"><span id="me"></span><button class="b small" id="fs">⛶ Fullscreen</button></div>
+  <div id="view"></div>
+</div>
+<script type="module">
+import { GAME_REGISTRY as GR } from "./games.js";
+import { db, ref, get, set, update, onValue, onDisconnect, runTransaction } from "./firebase-config.js";
+const $ = s => document.querySelector(s), esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const sid = (sessionStorage.sid ||= crypto.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now());
+const COL = { p1: "#00f5ff", p2: "#ff007f" }, OFF = { up: false, down: false, left: false, right: false, btnA: false };
+const LAYOUTS = {
+  "single-button": [{ k: "btnA", t: "tapA", label: "ACTION" }],
+  "left-right": [{ k: "left", t: "tapLeft", label: "TURN LEFT" }, { k: "right", t: "tapRight", label: "TURN RIGHT" }],
+  "dpad-fire": [{ k: "up", label: "▲" }, { k: "left", t: "tapLeft", label: "◀" }, { k: "right", t: "tapRight", label: "▶" }, { k: "down", label: "▼" }, { k: "btnA", t: "tapA", label: "FIRE" }]
+}; // "custom": the game supplies controllerButtons: [{k, t?, label, style?}]
+let room, slot, R, key, base, inRef, held = {}, taps = { tapLeft: 0, tapRight: 0, tapA: 0 };
+const err = m => $("#err").textContent = m || "";
+const leave = m => { alert(m); sessionStorage.removeItem("room"); location.href = location.pathname; };
+addEventListener("contextmenu", e => e.preventDefault());
+
+$("#room").value = (new URLSearchParams(location.search).get("room") || sessionStorage.room || "").toUpperCase().slice(0, 4);
+$("#name").value = sessionStorage.name || "";
+$("#go").onclick = join;
+if ($("#room").value && sessionStorage.name && sessionStorage.room === $("#room").value) join();
+
+async function join() {
+  const code = $("#room").value.trim().toUpperCase(), name = ($("#name").value.trim() || "Player").slice(0, 12);
+  err(""); slot = null;
+  if (code.length !== 4) return err("Enter the 4-letter room code.");
+  try {
+    if (!(await get(ref(db, "rooms/" + code))).exists()) return err("Room not found. Check the code on the TV.");
+    for (const s of ["p1", "p2"]) {
+      const r = await runTransaction(ref(db, `rooms/${code}/players/${s}`), c => (!c || c.sessionId === sid) ? { sessionId: sid, name, connected: true } : undefined);
+      if (r.committed) { slot = s; break; }
+    }
+    if (!slot) return err("This room is full.");
+  } catch (e) { return err("Could not join: " + e.message); }
+  room = code; sessionStorage.room = code; sessionStorage.name = name;
+  $("#join").hidden = true; $("#app").hidden = false; $("#me").textContent = `P${slot[1]} · ${name}`;
+  document.documentElement.style.setProperty("--c", COL[slot]);
+  start();
+}
+
+function start() {
+  base = `rooms/${room}`; inRef = ref(db, `${base}/inputs/${slot}`);
+  const me = ref(db, `${base}/players/${slot}`), conn = ref(db, `${base}/players/${slot}/connected`);
+  // Reconnection: fires on first connect and every time the phone wakes up / regains network.
+  onValue(ref(db, ".info/connected"), async s => {
+    if (!s.val()) return;
+    const p = (await get(me)).val();
+    if (!p || p.sessionId !== sid) return; // slot gone (room closed) or taken by someone else
+    await onDisconnect(conn).set(false);
+    await set(conn, true);
+    const c = (await get(inRef)).val() || {};
+    for (const k in taps) taps[k] = c[k] | 0; // resume tap counters
+    await update(inRef, OFF); key = null; draw(); // clear any stuck buttons and rebuild the controls
+  });
+  onValue(ref(db, base), s => { R = s.val(); if (!R) return leave("The TV closed this room."); draw(); });
+  wake();
+}
+
+function draw() {
+  if (!R) return;
+  const p = R.players || {}, n = GR.length, i = R.selectedLobbyIndex | 0, st = R.status, boss = slot === "p1";
+  const g = GR.find(x => x.id === R.activeGame) || GR[0], rdy = !!(p.p1?.connected && p.p2?.connected);
+  const k = [st, i, R.activeGame, rdy, R.winner].join("|");
+  if (k === key) return; key = k; // other player's button presses must not rebuild my UI
+  held = {}; update(inRef, OFF);
+  const v = $("#view"), B = ref(db, base);
+  if (st === "countdown" || st === "playing") return controls(v, g);
+  if (st === "lobby") {
+    v.innerHTML = boss
+      ? `<div class="card"><small>GAME ${i + 1} / ${n}</small><h1>${esc(GR[i].title)}</h1><p>${esc(GR[i].description)}</p></div>
+         <div class="row"><button class="b" id="pv">PREV GAME</button><button class="b" id="nx">NEXT GAME</button></div>
+         <button class="b go" id="st" ${rdy ? "" : "disabled"}>${rdy ? "START GAME" : "WAITING FOR P2…"}</button>`
+      : `<div class="card"><h1>${esc(p[slot]?.name || "")}</h1><p>You are Player 2. Waiting for Player 1 to choose a game...</p></div>`;
+    if (boss) {
+      $("#pv").onclick = () => update(B, { selectedLobbyIndex: (i + n - 1) % n });
+      $("#nx").onclick = () => update(B, { selectedLobbyIndex: (i + 1) % n });
+      $("#st").onclick = () => update(B, { status: "countdown", activeGame: GR[i].id, winner: null });
+    }
+  } else if (st === "gameover") {
+    const w = R.winner, res = w === "draw" ? "DRAW" : w === slot ? "YOU WIN!" : "YOU LOSE";
+    v.innerHTML = `<div class="card"><h1>${res}</h1><p>Session wins — P1 ${R.scores?.p1 | 0} · P2 ${R.scores?.p2 | 0}</p></div>` +
+      (boss ? `<button class="b go" id="pa">PLAY AGAIN</button><button class="b" id="bl">BACK TO LOBBY</button>` : `<div class="card"><p>Waiting for Player 1…</p></div>`);
+    if (boss) {
+      $("#pa").onclick = () => update(B, { status: "countdown", winner: null });
+      $("#bl").onclick = () => update(B, { status: "lobby", winner: null });
+    }
+  }
+}
+
+function controls(v, g) {
+  const L = LAYOUTS[g.controllerLayout] || g.controllerButtons || [], lab = g.controllerLabels || {};
+  v.innerHTML = `<div class="pad ${esc(g.controllerLayout)}"></div>`;
+  for (const b of L) {
+    const el = document.createElement("button"); el.className = "b"; el.dataset.k = b.k; el.textContent = lab[b.k] || b.label;
+    if (b.style) el.style.cssText = b.style;
+    v.firstChild.append(el); bind(el, b);
+  }
+}
+
+// Multi-touch: each button tracks its own pointerIds; a press writes the boolean AND bumps the tap counter.
+function bind(el, b) {
+  const ids = (held[b.k] = new Set()), push = down => {
+    const o = { [b.k]: down };
+    if (down && b.t) o[b.t] = taps[b.t] = (taps[b.t] + 1) % 10000;
+    update(inRef, o);
+  };
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    if (!ids.size) { el.classList.add("on"); navigator.vibrate?.(25); push(true); }
+    ids.add(e.pointerId);
+  });
+  const up = e => { if (ids.delete(e.pointerId) && !ids.size) { el.classList.remove("on"); push(false); } };
+  ["pointerup", "pointercancel", "pointerleave"].forEach(t => el.addEventListener(t, up));
+}
+
+async function wake() { try { await navigator.wakeLock.request("screen"); } catch {} }
+document.addEventListener("visibilitychange", () => { if (!document.hidden && inRef) { wake(); update(inRef, OFF); } });
+$("#fs").onclick = () => {
+  const d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (f) f.call(d)?.catch?.(() => {}); else alert("On iPhone: tap Share → Add to Home Screen to play fullscreen.");
+};
+</script>
+</body></html>
