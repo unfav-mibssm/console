@@ -2,58 +2,66 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a12"><title>Mibs Console — Controller</title>
-<style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><link rel="modulepreload" href="kit.js"><link rel="modulepreload" href="games.js"><link rel="modulepreload" href="firebase-config.js"><style>
+:root{--ink:#1d1b2f;--bg:#ffd84d;--c:#2f6df6;--ok:#22c55e}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-:root{--c:#00f5ff}
-html,body{background:#0a0a12;color:#fff;font:700 18px system-ui,sans-serif}
+html{-webkit-text-size-adjust:100%}
+html,body{background:var(--bg);color:var(--ink);font:500 18px/1.3 Fredoka,system-ui,sans-serif}
 body{height:100dvh;width:100vw;overflow:hidden;position:fixed;inset:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #join,#app{height:100%;display:flex;flex-direction:column;gap:14px;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#app{background:var(--c);color:#fff}
 #join{justify-content:center}
-#join h1{text-align:center;color:#00f5ff;text-shadow:0 0 18px #00f5ff;letter-spacing:4px}
-input{font:inherit;padding:16px;border-radius:12px;border:2px solid #334;background:#12121e;color:#fff;text-align:center;user-select:text;-webkit-user-select:text;touch-action:auto}
-#room{text-transform:uppercase;letter-spacing:12px;font-size:28px}
-#err{color:#ff5470;min-height:1.2em;text-align:center}
-.top{display:flex;justify-content:space-between;align-items:center;color:var(--c)}
+#join h1{text-align:center;font-size:34px}
+input{font:inherit;font-size:22px;padding:16px;border-radius:16px;border:3px solid var(--ink);background:#fff;color:var(--ink);text-align:center;user-select:text;-webkit-user-select:text;touch-action:auto}
+#room{text-transform:uppercase;letter-spacing:10px;font-size:30px}
+#err{color:#b00020;min-height:1.2em;text-align:center;font-weight:700}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
+#ping{font-size:14px;font-weight:500;opacity:.85}
 #view{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
-.card{padding:20px;border:2px solid var(--c);border-radius:16px;text-align:center;background:#11111c}
-.card h1{color:var(--c);text-shadow:0 0 14px var(--c)}
-.card p{font-weight:400;font-size:15px;margin-top:6px}
+.card{padding:20px;border:3px solid var(--ink);border-radius:20px;text-align:center;background:#fff;color:var(--ink);box-shadow:0 5px 0 var(--ink)}
+.card h1{font-size:30px}.card p{font-size:16px;margin-top:6px}
 .row{display:flex;gap:14px}.row .b{flex:1}
-.b{font:inherit;font-weight:900;color:var(--c);background:transparent;border:3px solid var(--c);border-radius:18px;padding:18px;touch-action:none;box-shadow:0 0 20px color-mix(in srgb,var(--c) 40%,transparent)}
-.b.on{background:var(--c);color:#0a0a12}
-.b:disabled{opacity:.3}
-.go{flex:1;background:#00ff88;border-color:#00ff88;color:#022;font-size:30px;box-shadow:0 0 24px #00ff8866}
-#go{background:var(--c);color:#0a0a12;border-color:var(--c)}
-.small{padding:6px 12px;font-size:14px;border-width:2px;border-radius:10px}
-.pad{flex:1;position:relative;display:flex;gap:12px;min-height:0}
-.pad .b{flex:1;font-size:28px}
-.single-button .b{font-size:52px}
+.b{font:inherit;font-weight:700;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:22px;padding:18px;touch-action:none;box-shadow:0 6px 0 var(--ink)}
+.b.on{transform:translateY(5px);box-shadow:0 1px 0 var(--ink);background:var(--ink);color:#fff}
+.b:disabled{opacity:.4}
+.go{flex:1;background:var(--ok);font-size:30px}
+#go{background:var(--c);color:#fff}
+.small{padding:6px 12px;font-size:14px;border-radius:12px;box-shadow:0 3px 0 var(--ink)}
+.pad{flex:1;position:relative;display:flex;gap:14px;min-height:0}
+.pad .b{flex:1;font-size:30px}
+.single-button .b{font-size:54px}
 .dpad-fire{display:grid;grid-template-columns:repeat(3,1fr) 1.5fr;grid-template-rows:repeat(3,1fr)}
 .dpad-fire [data-k=up]{grid-area:1/2}.dpad-fire [data-k=left]{grid-area:2/1}.dpad-fire [data-k=right]{grid-area:2/3}.dpad-fire [data-k=down]{grid-area:3/2}
 .dpad-fire [data-k=btnA]{grid-area:1/4/4/5}
+#app{background-image:radial-gradient(#ffffff26 2px,transparent 2.5px);background-size:26px 26px}
+.b:focus-visible,input:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
+.go:active:not(:disabled){transform:translateY(5px);box-shadow:0 1px 0 var(--ink)}
+@media(max-height:480px){.top{display:none}.card{padding:10px}#app{gap:8px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 <div id="join">
-  <h1>MIBS CONSOLE</h1>
-  <input id="room" maxlength="4" placeholder="ROOM" autocapitalize="characters" autocomplete="off">
+  <h1>Join a game</h1>
+  <input id="room" maxlength="4" placeholder="Room code" autocapitalize="characters" autocomplete="off">
   <input id="name" maxlength="12" placeholder="Your nickname" autocomplete="off">
-  <button class="b" id="go">JOIN GAME</button>
+  <button class="b" id="go">Join game</button>
   <div id="err"></div>
 </div>
 <div id="app" hidden>
-  <div class="top"><span id="me"></span><button class="b small" id="fs">⛶ Fullscreen</button></div>
+  <div class="top"><span id="me"></span><span id="ping"></span><button class="b small" id="fs">⛶ Fullscreen</button></div>
   <div id="view"></div>
 </div>
 <script type="module">
-import { GAME_REGISTRY as GR } from "./games.js";
+import { loadGames } from "./games.js";
+const GR = await loadGames();
 import { db, ref, get, set, update, onValue, onDisconnect, runTransaction } from "./firebase-config.js";
 const $ = s => document.querySelector(s), esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const sid = (sessionStorage.sid ||= crypto.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now());
-const COL = { p1: "#00f5ff", p2: "#ff007f" }, OFF = { up: false, down: false, left: false, right: false, btnA: false };
+const COL = { p1: "#2f6df6", p2: "#ff4f6d" }, OFF = { up: false, down: false, left: false, right: false, btnA: false };
 const LAYOUTS = {
-  "single-button": [{ k: "btnA", t: "tapA", label: "ACTION" }],
-  "left-right": [{ k: "left", t: "tapLeft", label: "TURN LEFT" }, { k: "right", t: "tapRight", label: "TURN RIGHT" }],
-  "dpad-fire": [{ k: "up", label: "▲" }, { k: "left", t: "tapLeft", label: "◀" }, { k: "right", t: "tapRight", label: "▶" }, { k: "down", label: "▼" }, { k: "btnA", t: "tapA", label: "FIRE" }]
+  "single-button": [{ k: "btnA", t: "tapA", label: "Action" }],
+  "left-right": [{ k: "left", t: "tapLeft", label: "Turn left" }, { k: "right", t: "tapRight", label: "Turn right" }],
+  "dpad-fire": [{ k: "up", label: "▲" }, { k: "left", t: "tapLeft", label: "◀" }, { k: "right", t: "tapRight", label: "▶" }, { k: "down", label: "▼" }, { k: "btnA", t: "tapA", label: "Fire" }]
 }; // "custom": the game supplies controllerButtons: [{k, t?, label, style?}]
 let room, slot, R, key, base, inRef, held = {}, taps = { tapLeft: 0, tapRight: 0, tapA: 0 };
 const err = m => $("#err").textContent = m || "";
@@ -97,24 +105,30 @@ function start() {
     for (const k in taps) taps[k] = c[k] | 0; // resume tap counters
     await update(inRef, OFF); key = null; draw(); // clear any stuck buttons and rebuild the controls
   });
-  onValue(ref(db, base), s => { R = s.val(); if (!R) return leave("The TV closed this room."); draw(); });
+  // Only listen to what this phone needs, so the other player's button presses never reach it.
+  R = {}; const ks = ["status", "activeGame", "selectedLobbyIndex", "winner", "scores", "players"], got = new Set();
+  ks.forEach(k => onValue(ref(db, `${base}/${k}`), s => {
+    R[k] = s.val(); got.add(k);
+    if (k === "status" && R.status == null) return leave("The TV closed this room.");
+    if (got.size === ks.length) draw();
+  }));
   wake();
 }
 
 function draw() {
-  if (!R) return;
+  if (!R?.status) return;
   const p = R.players || {}, n = GR.length, i = R.selectedLobbyIndex | 0, st = R.status, boss = slot === "p1";
   const g = GR.find(x => x.id === R.activeGame) || GR[0], rdy = !!(p.p1?.connected && p.p2?.connected);
-  const k = [st, i, R.activeGame, rdy, R.winner].join("|");
+  const k = [st === "countdown" || st === "playing" ? "game" : st, i, R.activeGame, rdy, R.winner].join("|");
   if (k === key) return; key = k; // other player's button presses must not rebuild my UI
   held = {}; update(inRef, OFF);
   const v = $("#view"), B = ref(db, base);
   if (st === "countdown" || st === "playing") return controls(v, g);
   if (st === "lobby") {
     v.innerHTML = boss
-      ? `<div class="card"><small>GAME ${i + 1} / ${n}</small><h1>${esc(GR[i].title)}</h1><p>${esc(GR[i].description)}</p></div>
-         <div class="row"><button class="b" id="pv">PREV GAME</button><button class="b" id="nx">NEXT GAME</button></div>
-         <button class="b go" id="st" ${rdy ? "" : "disabled"}>${rdy ? "START GAME" : "WAITING FOR P2…"}</button>`
+      ? `<div class="card"><small>Game ${i + 1} of ${n}</small><h1>${esc(GR[i].icon || "🎮")} ${esc(GR[i].title)}</h1><p>${esc(GR[i].description)}</p></div>
+         <div class="row"><button class="b" id="pv">Previous game</button><button class="b" id="nx">Next game</button></div>
+         <button class="b go" id="st" ${rdy ? "" : "disabled"}>${rdy ? "Start game" : "Waiting for Player 2…"}</button>`
       : `<div class="card"><h1>${esc(p[slot]?.name || "")}</h1><p>You are Player 2. Waiting for Player 1 to choose a game...</p></div>`;
     if (boss) {
       $("#pv").onclick = () => update(B, { selectedLobbyIndex: (i + n - 1) % n });
@@ -122,9 +136,9 @@ function draw() {
       $("#st").onclick = () => update(B, { status: "countdown", activeGame: GR[i].id, winner: null });
     }
   } else if (st === "gameover") {
-    const w = R.winner, res = w === "draw" ? "DRAW" : w === slot ? "YOU WIN!" : "YOU LOSE";
+    const w = R.winner, res = w === "draw" ? "Draw" : w === slot ? "You win!" : "You lose";
     v.innerHTML = `<div class="card"><h1>${res}</h1><p>Session wins — P1 ${R.scores?.p1 | 0} · P2 ${R.scores?.p2 | 0}</p></div>` +
-      (boss ? `<button class="b go" id="pa">PLAY AGAIN</button><button class="b" id="bl">BACK TO LOBBY</button>` : `<div class="card"><p>Waiting for Player 1…</p></div>`);
+      (boss ? `<button class="b go" id="pa">Play again</button><button class="b" id="bl">Back to lobby</button>` : `<div class="card"><p>Waiting for Player 1…</p></div>`);
     if (boss) {
       $("#pa").onclick = () => update(B, { status: "countdown", winner: null });
       $("#bl").onclick = () => update(B, { status: "lobby", winner: null });
@@ -147,7 +161,7 @@ function bind(el, b) {
   const ids = (held[b.k] = new Set()), push = down => {
     const o = { [b.k]: down };
     if (down && b.t) o[b.t] = taps[b.t] = (taps[b.t] + 1) % 10000;
-    update(inRef, o);
+    const t0 = performance.now(); update(inRef, o).then(() => $("#ping").textContent = Math.round(performance.now() - t0) + " ms");
   };
   el.addEventListener("pointerdown", e => {
     e.preventDefault(); el.setPointerCapture(e.pointerId);
