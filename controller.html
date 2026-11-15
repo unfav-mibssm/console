@@ -37,7 +37,8 @@ input{font:inherit;font-size:22px;padding:16px;border-radius:16px;border:3px sol
 #app{background-image:radial-gradient(#ffffff26 2px,transparent 2.5px);background-size:26px 26px}
 .b:focus-visible,input:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
 .go:active:not(:disabled){transform:translateY(5px);box-shadow:0 1px 0 var(--ink)}
-@media(max-height:480px){.top{display:none}.card{padding:10px}#app{gap:8px}}
+@media(max-height:480px){.top{font-size:13px}.top .small{padding:2px 8px;box-shadow:0 2px 0 var(--ink)}.card{padding:10px}#app{gap:6px}}
+.up-down{flex-direction:column}.up-down .b{font-size:44px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 <div id="join">
@@ -48,7 +49,7 @@ input{font:inherit;font-size:22px;padding:16px;border-radius:16px;border:3px sol
   <div id="err"></div>
 </div>
 <div id="app" hidden>
-  <div class="top"><span id="me"></span><span id="ping"></span><button class="b small" id="fs">⛶ Fullscreen</button></div>
+  <div class="top"><span id="me"></span><span id="ping"></span><button class="b small" id="ex" hidden>Exit game</button><button class="b small" id="fs">⛶ Fullscreen</button></div>
   <div id="view"></div>
 </div>
 <script type="module">
@@ -61,6 +62,7 @@ const COL = { p1: "#2f6df6", p2: "#ff4f6d" }, OFF = { up: false, down: false, le
 const LAYOUTS = {
   "single-button": [{ k: "btnA", t: "tapA", label: "Action" }],
   "left-right": [{ k: "left", t: "tapLeft", label: "Turn left" }, { k: "right", t: "tapRight", label: "Turn right" }],
+  "up-down": [{ k: "up", label: "▲ Up" }, { k: "down", label: "▼ Down" }],
   "dpad-fire": [{ k: "up", label: "▲" }, { k: "left", t: "tapLeft", label: "◀" }, { k: "right", t: "tapRight", label: "▶" }, { k: "down", label: "▼" }, { k: "btnA", t: "tapA", label: "Fire" }]
 }; // "custom": the game supplies controllerButtons: [{k, t?, label, style?}]
 let room, slot, R, key, base, inRef, held = {}, taps = { tapLeft: 0, tapRight: 0, tapA: 0 };
@@ -79,9 +81,9 @@ async function join() {
   if (code.length !== 4) return err("Enter the 4-letter room code.");
   try {
     if (!(await get(ref(db, "rooms/" + code))).exists()) return err("Room not found. Check the code on the TV.");
-    for (const s of ["p1", "p2"]) {
-      const r = await runTransaction(ref(db, `rooms/${code}/players/${s}`), c => (!c || c.sessionId === sid) ? { sessionId: sid, name, connected: true } : undefined);
-      if (r.committed) { slot = s; break; }
+    outer: for (const steal of [false, true]) for (const s of ["p1", "p2"]) {
+      const r = await runTransaction(ref(db, `rooms/${code}/players/${s}`), c => (!c || c.sessionId === sid || (steal && c.connected === false)) ? { sessionId: sid, name, connected: true } : undefined);
+      if (r.committed) { slot = s; break outer; }
     }
     if (!slot) return err("This room is full.");
   } catch (e) { return err("Could not join: " + e.message); }
@@ -98,29 +100,23 @@ function start() {
   onValue(ref(db, ".info/connected"), async s => {
     if (!s.val()) return;
     const p = (await get(me)).val();
-    if (!p || p.sessionId !== sid) return; // slot gone (room closed) or taken by someone else
+    if (!p) return; if (p.sessionId !== sid) return leave("Someone else took your seat in this room."); // slot gone (room closed) or taken by someone else
     await onDisconnect(conn).set(false);
     await set(conn, true);
     const c = (await get(inRef)).val() || {};
     for (const k in taps) taps[k] = c[k] | 0; // resume tap counters
     await update(inRef, OFF); key = null; draw(); // clear any stuck buttons and rebuild the controls
   });
-  // Only listen to what this phone needs, so the other player's button presses never reach it.
-  R = {}; const ks = ["status", "activeGame", "selectedLobbyIndex", "winner", "scores", "players"], got = new Set();
-  ks.forEach(k => onValue(ref(db, `${base}/${k}`), s => {
-    R[k] = s.val(); got.add(k);
-    if (k === "status" && R.status == null) return leave("The TV closed this room.");
-    if (got.size === ks.length) draw();
-  }));
+  onValue(ref(db, base), s => { R = s.val(); if (!R) return leave("The TV closed this room."); draw(); }); // one listener: status and game always arrive together
   wake();
 }
 
 function draw() {
   if (!R?.status) return;
-  const p = R.players || {}, n = GR.length, i = R.selectedLobbyIndex | 0, st = R.status, boss = slot === "p1";
+  const p = R.players || {}, n = GR.length, i = Math.min(Math.max(R.selectedLobbyIndex | 0, 0), n - 1), st = R.status, boss = slot === "p1";
   const g = GR.find(x => x.id === R.activeGame) || GR[0], rdy = !!(p.p1?.connected && p.p2?.connected);
-  const k = [st === "countdown" || st === "playing" ? "game" : st, i, R.activeGame, rdy, R.winner].join("|");
-  if (k === key) return; key = k; // other player's button presses must not rebuild my UI
+  const gm = st === "countdown" || st === "playing", k = gm ? "game|" + R.activeGame : st === "lobby" ? ["lobby", i, rdy].join("|") : [st, R.winner, R.scores?.p1, R.scores?.p2].join("|");
+  if (k === key) return; key = k; $("#ex").hidden = !gm; // other player's button presses must not rebuild my UI
   held = {}; update(inRef, OFF);
   const v = $("#view"), B = ref(db, base);
   if (st === "countdown" || st === "playing") return controls(v, g);
@@ -164,16 +160,23 @@ function bind(el, b) {
     const t0 = performance.now(); update(inRef, o).then(() => $("#ping").textContent = Math.round(performance.now() - t0) + " ms");
   };
   el.addEventListener("pointerdown", e => {
-    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch {}
     if (!ids.size) { el.classList.add("on"); navigator.vibrate?.(25); push(true); }
     ids.add(e.pointerId);
   });
   const up = e => { if (ids.delete(e.pointerId) && !ids.size) { el.classList.remove("on"); push(false); } };
-  ["pointerup", "pointercancel", "pointerleave"].forEach(t => el.addEventListener(t, up));
+  ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"].forEach(t => el.addEventListener(t, up));
 }
 
 async function wake() { try { await navigator.wakeLock.request("screen"); } catch {} }
-document.addEventListener("visibilitychange", () => { if (!document.hidden && inRef) { wake(); update(inRef, OFF); } });
+const releaseAll = () => { for (const k in held) held[k].clear(); document.querySelectorAll(".pad .b.on").forEach(el => el.classList.remove("on")); if (inRef) update(inRef, OFF); };
+addEventListener("blur", releaseAll);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); releaseAll(); });
+let exT; $("#ex").onclick = e => {
+  const b = e.currentTarget; clearTimeout(exT);
+  if (b.dataset.arm) { b.dataset.arm = ""; b.textContent = "Exit game"; update(ref(db, base), { status: "lobby", winner: null }); }
+  else { b.dataset.arm = "1"; b.textContent = "Tap again to exit"; exT = setTimeout(() => { b.dataset.arm = ""; b.textContent = "Exit game"; }, 3000); }
+};
 $("#fs").onclick = () => {
   const d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen;
   if (f) f.call(d)?.catch?.(() => {}); else alert("On iPhone: tap Share → Add to Home Screen to play fullscreen.");
