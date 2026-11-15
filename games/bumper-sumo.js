@@ -17,7 +17,7 @@ export default {
       if (o.dash) {
         if (!was) { o.vx += Math.cos(o.a) * 220; o.vy += Math.sin(o.a) * 220; audio.beep(300, .12, "sawtooth", .08, 700); } // instant kick on press
         o.vx += Math.cos(o.a) * 1000 * dt; o.vy += Math.sin(o.a) * 1000 * dt;
-      } else o.a += 2.4 * dt; // idle: spin in place
+      } else o.a += 2 * dt; // idle: spin in place
       const f = Math.pow(.14, dt); o.vx *= f; o.vy *= f; o.x += o.vx * dt; o.y += o.vy * dt;
     });
     const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1, ov = p.r + q.r - d;
@@ -50,6 +50,7 @@ export default {
       ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(o.r + 26, 0); ctx.lineTo(o.r + 4, -15); ctx.lineTo(o.r + 4, 15); ctx.fill();
       ctx.restore();
     });
+    ctx.fillStyle = INK; ctx.fillRect(W / 2 - 150, 22, 300, 14); ctx.fillStyle = "#fff"; ctx.fillRect(W / 2 - 147, 25, 294 * (1 - Math.min(1, s.t / 45)), 8); // time until the ring is smallest
     drawParts(ctx, s.parts); ctx.restore();
   },
   cleanup() {}
