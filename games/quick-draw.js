@@ -20,6 +20,7 @@ export default {
     if (s.res) { s.endT += dt; return { winner: s.endT > 1.4 ? s.res : null }; }
     s.t += dt;
     if (s.phase === "wait") {
+      if (s.t < .35) n[0] = n[1] = 0; // grace: late taps from the last round do not count
       if (n[0] && n[1]) point(s, -1, "Both jumped the gun!", audio);
       else if (n[0] || n[1]) point(s, n[0] ? 1 : 0, s.names[n[0] ? 0 : 1] + " jumped the gun!", audio);
       else if (s.t >= s.delay) { s.phase = "go"; s.t = 0; audio.beep(880, .25, "square", .2); }
