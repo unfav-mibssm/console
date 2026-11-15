@@ -49,6 +49,7 @@ canvas{border:3px solid var(--ink);border-radius:14px;background:#fff}
 #tools{position:fixed;right:12px;bottom:12px;display:flex;gap:8px;z-index:6}
 #tools button{padding:4px 12px;font-size:20px;border-radius:12px;box-shadow:0 3px 0 var(--ink)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#how{position:fixed;left:50%;bottom:9%;transform:translateX(-50%);max-width:min(900px,90vw);text-align:center;background:#fff;border:3px solid var(--ink);border-radius:20px;box-shadow:0 6px 0 var(--ink);padding:14px 26px;font-size:28px;font-weight:700;z-index:4}
 </style></head><body>
 <div id="lobby">
   <header><div class="logo">Mibs Console</div><div class="tag">Couch games for two</div></header>
@@ -66,6 +67,7 @@ canvas{border:3px solid var(--ink);border-radius:14px;background:#fff}
 </div>
 <div id="stage" hidden><div id="hud"><span id="h1"></span><span id="ht"></span><span id="h2"></span></div><canvas id="cv"></canvas></div>
 <div id="cdn" hidden></div>
+<div id="how" hidden></div>
 <div id="over" hidden><div id="wt"></div><div id="sc"></div>
   <div style="display:flex;gap:16px"><button id="again">Play again</button><button id="chg">Change game</button></div>
   <div class="hint">Player 1 can also pick on their phone · Enter = play again · Esc = change game</div></div>
@@ -154,17 +156,17 @@ function crash(e) { console.error(e); toast("That game hit an error, so we went 
 function begin() {
   G?.cleanup?.(S);
   G = GR.find(g => g.id === R.activeGame) || GR[0]; try { S = G.init(cv, R.players || {}); } catch (e) { return crash(e); }
-  mode = "countdown"; cd = 3.6; shown = -1; conf = [];
+  mode = "countdown"; cd = 3.6; shown = -1; conf = []; $("#how").textContent = G.description; $("#how").hidden = false;
   $("#lobby").hidden = true; $("#stage").hidden = false; $("#over").hidden = true; $("#exit").hidden = false; fit();
 }
 function toLobby() {
   G?.cleanup?.(S); G = S = null; mode = "lobby";
-  $("#lobby").hidden = false; $("#stage").hidden = true; $("#over").hidden = true; $("#cdn").hidden = true; $("#exit").hidden = true;
+  $("#lobby").hidden = false; $("#stage").hidden = true; $("#over").hidden = true; $("#cdn").hidden = true; $("#exit").hidden = true; $("#how").hidden = true;
 }
 function finish(w) {
   mode = "over";
   const sc = { p1: (R.scores?.p1 | 0) + (w === "p1" ? 1 : 0), p2: (R.scores?.p2 | 0) + (w === "p2" ? 1 : 0) };
-  update(rRef, { status: "gameover", winner: w, scores: sc });
+  update(rRef, { status: "gameover", winner: w, scores: sc }).catch(e => toast("Could not save the result: " + e.message));
   $("#wt").textContent = w === "draw" ? "Draw!" : (R.players?.[w]?.name || w.toUpperCase()) + " wins!";
   $("#wt").style.color = w === "p1" ? "#2f6df6" : w === "p2" ? "#ff4f6d" : "#1d1b2f";
   $("#sc").textContent = `${sc.p1} — ${sc.p2}`; $("#over").hidden = false; audio.fanfare();
@@ -176,14 +178,14 @@ function tick(dt) {
     shown = n; const c = $("#cdn"); c.hidden = false; c.textContent = n || "GO!"; c.style.color = n ? "#1d1b2f" : "#22c55e";
     audio.beep(n ? 440 : 880, n ? .15 : .4, "square", .15);
   }
-  if (cd <= 0) { mode = "play"; $("#cdn").hidden = true; update(rRef, { status: "playing" }); }
+  if (cd <= 0) { mode = "play"; $("#cdn").hidden = true; $("#how").hidden = true; update(rRef, { status: "playing" }); }
 }
 
 // ---- Canvas: 16:9 logical space scaled with devicePixelRatio ----
 function fit() {
-  const dpr = Math.min(devicePixelRatio || 1, 2), s = Math.min((innerWidth - 24) / W, (innerHeight - 76) / H);
-  cv.style.width = W * s + "px"; cv.style.height = H * s + "px"; cv.width = W * s * dpr; cv.height = H * s * dpr;
-  ctx.setTransform(s * dpr, 0, 0, s * dpr, 0, 0);
+  const s = Math.min((innerWidth - 24) / W, (innerHeight - 76) / H), k = Math.min((devicePixelRatio || 1) * s, 1.5); // draw at most ~1080p, the browser scales it up
+  cv.style.width = W * s + "px"; cv.style.height = H * s + "px"; cv.width = Math.round(W * k); cv.height = Math.round(H * k);
+  ctx.setTransform(k, 0, 0, k, 0, 0);
 }
 addEventListener("resize", fit); fit();
 let last = performance.now();
