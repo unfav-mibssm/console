@@ -113,32 +113,31 @@ function start() {
 
 function draw() {
   if (!R?.status) return;
-  const p = R.players || {}, n = GR.length, i = Math.min(Math.max(R.selectedLobbyIndex | 0, 0), n - 1), st = R.status, boss = slot === "p1";
-  const g = GR.find(x => x.id === R.activeGame) || GR[0], rdy = !!(p.p1?.connected && p.p2?.connected);
-  const gm = st === "countdown" || st === "playing", k = gm ? "game|" + R.activeGame : st === "lobby" ? ["lobby", i, rdy].join("|") : [st, R.winner, R.scores?.p1, R.scores?.p2].join("|");
-  if (k === key) return; key = k; $("#ex").hidden = !gm; // other player's button presses must not rebuild my UI
+  const p = R.players || {}, n = GR.length, st = R.status, B = ref(db, base);
+  const i = Math.min(Math.max(R.selectedLobbyIndex | 0, 0), n - 1), boss = slot === "p1" || !p.p1?.connected; // Player 2 gets the lobby buttons if Player 1 is offline
+  const rdy = !!(p.p1?.connected && p.p2?.connected), gm = st === "countdown" || st === "playing", g = GR.find(x => x.id === R.activeGame);
+  const k = gm ? "game|" + R.activeGame : st === "lobby" ? ["lobby", i, rdy, boss].join("|") : [st, R.winner, R.scores?.p1, R.scores?.p2].join("|");
+  if (k === key) return; key = k; // other player's button presses must not rebuild my UI
+  const ex = $("#ex"); ex.hidden = !gm; ex.dataset.arm = ""; ex.textContent = "Exit game";
   held = {}; update(inRef, OFF);
-  const v = $("#view"), B = ref(db, base);
-  if (st === "countdown" || st === "playing") return controls(v, g);
+  const v = $("#view");
+  if (gm) return g ? controls(v, g) : (v.innerHTML = `<div class="card"><h1>Refresh this page</h1><p>The TV has a newer game list than this phone.</p></div><button class="b go" onclick="location.reload()">Refresh</button>`);
   if (st === "lobby") {
     v.innerHTML = boss
       ? `<div class="card"><small>Game ${i + 1} of ${n}</small><h1>${esc(GR[i].icon || "🎮")} ${esc(GR[i].title)}</h1><p>${esc(GR[i].description)}</p></div>
          <div class="row"><button class="b" id="pv">Previous game</button><button class="b" id="nx">Next game</button></div>
-         <button class="b go" id="st" ${rdy ? "" : "disabled"}>${rdy ? "Start game" : "Waiting for Player 2…"}</button>`
-      : `<div class="card"><h1>${esc(p[slot]?.name || "")}</h1><p>You are Player 2. Waiting for Player 1 to choose a game...</p></div>`;
+         <button class="b go" id="st" ${rdy ? "" : "disabled"}>${rdy ? "Start game" : slot === "p1" ? "Waiting for Player 2…" : "Waiting for Player 1…"}</button>`
+      : `<div class="card"><h1>${esc(p[slot]?.name || "")}</h1><p>You are Player ${slot[1]}. Waiting for Player 1 to choose a game...</p></div>`;
     if (boss) {
       $("#pv").onclick = () => update(B, { selectedLobbyIndex: (i + n - 1) % n });
       $("#nx").onclick = () => update(B, { selectedLobbyIndex: (i + 1) % n });
       $("#st").onclick = () => update(B, { status: "countdown", activeGame: GR[i].id, winner: null });
     }
-  } else if (st === "gameover") {
+  } else if (st === "gameover") { // both players get the buttons, so nobody is ever stuck
     const w = R.winner, res = w === "draw" ? "Draw" : w === slot ? "You win!" : "You lose";
-    v.innerHTML = `<div class="card"><h1>${res}</h1><p>Session wins — P1 ${R.scores?.p1 | 0} · P2 ${R.scores?.p2 | 0}</p></div>` +
-      (boss ? `<button class="b go" id="pa">Play again</button><button class="b" id="bl">Back to lobby</button>` : `<div class="card"><p>Waiting for Player 1…</p></div>`);
-    if (boss) {
-      $("#pa").onclick = () => update(B, { status: "countdown", winner: null });
-      $("#bl").onclick = () => update(B, { status: "lobby", winner: null });
-    }
+    v.innerHTML = `<div class="card"><h1>${res}</h1><p>Session wins: P1 ${R.scores?.p1 | 0} · P2 ${R.scores?.p2 | 0}</p></div><button class="b go" id="pa">Play again</button><button class="b" id="bl">Back to lobby</button>`;
+    $("#pa").onclick = () => update(B, { status: "countdown", winner: null });
+    $("#bl").onclick = () => update(B, { status: "lobby", winner: null });
   }
 }
 
@@ -157,7 +156,7 @@ function bind(el, b) {
   const ids = (held[b.k] = new Set()), push = down => {
     const o = { [b.k]: down };
     if (down && b.t) o[b.t] = taps[b.t] = (taps[b.t] + 1) % 10000;
-    const t0 = performance.now(); update(inRef, o).then(() => $("#ping").textContent = Math.round(performance.now() - t0) + " ms");
+    const t0 = performance.now(); update(inRef, o).then(() => { const ms = Math.round(performance.now() - t0), e = $("#ping"); e.textContent = ms + " ms"; e.style.color = ms < 100 ? "#bbf7d0" : ms < 200 ? "#fde68a" : "#fecaca"; });
   };
   el.addEventListener("pointerdown", e => {
     e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch {}
