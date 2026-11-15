@@ -4,14 +4,14 @@ import { getDatabase } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-
 export { ref, get, set, update, onValue, onDisconnect, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD4D9g5OlzkxAbctjU8qJwgvmoV_MEMxM8",
-  authDomain: "mibsconsole.firebaseapp.com",
-  databaseURL: "https://mibsconsole-default-rtdb.firebaseio.com",
-  projectId: "mibsconsole",
-  storageBucket: "mibsconsole.firebasestorage.app",
-  messagingSenderId: "812252420467",
-  appId: "1:812252420467:web:9de53d5434d62494c6cd06",
-  measurementId: "G-7459WXSPJZ"
+  apiKey: "AIzaSyCsdIWrUu0ds75HsgEFFAxqLQIoxJCG8X8",
+  authDomain: "mibconsole2.firebaseapp.com",
+  databaseURL: "https://mibconsole2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mibconsole2",
+  storageBucket: "mibconsole2.firebasestorage.app",
+  messagingSenderId: "550069699117",
+  appId: "1:550069699117:web:e137813328bdb1535f6ea4",
+  measurementId: "G-FC86CCCV9F"
 };
 
 export const app = initializeApp(firebaseConfig);
