@@ -1,187 +1,34 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mibs Console — TV</title>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffd84d"><title>Mibs Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
+:root{--ink:#1d1b2f;--bg:#ffd84d;--p1:#2f6df6}
 *{box-sizing:border-box;margin:0}
-[hidden]{display:none!important}
-body{background:#0a0a12;color:#e8f6ff;font:600 18px system-ui,sans-serif;height:100vh;overflow:hidden}
-#lobby{display:flex;flex-direction:column;align-items:center;gap:18px;padding:22px;height:100vh}
-.logo{font-size:40px;letter-spacing:10px;color:#00f5ff;text-shadow:0 0 24px #00f5ff}
-.join{display:flex;gap:40px;align-items:center}
-.join small{opacity:.6;display:block}
-#code{font-size:112px;font-weight:900;letter-spacing:18px;color:#fff;text-shadow:0 0 30px #00f5ff,0 0 60px #ff007f;min-width:4ch}
-#qr{background:#fff;padding:12px;border-radius:14px;line-height:0;min-width:244px;min-height:244px}
-.badges{display:flex;gap:20px}
-.badge{padding:10px 26px;border-radius:99px;border:2px solid #333;opacity:.45}
-.badge.on{opacity:1}
-#b1.on{border-color:#00f5ff;color:#00f5ff;box-shadow:0 0 20px #00f5ff66}
-#b2.on{border-color:#ff007f;color:#ff007f;box-shadow:0 0 20px #ff007f66}
-#grid{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
-.card{width:300px;padding:20px;border:2px solid var(--a);border-radius:16px;cursor:pointer;opacity:.5;background:#11111c;transition:transform .15s}
-.card.sel{opacity:1;box-shadow:0 0 30px var(--a);transform:scale(1.06)}
-.card h2{color:var(--a);margin-bottom:8px}
-.card p{font-size:15px;font-weight:400}
-button{font:inherit;font-weight:800;padding:14px 34px;border-radius:12px;border:0;cursor:pointer;background:#00ff88;color:#021}
-button:disabled{opacity:.3;cursor:not-allowed}
-.hint{opacity:.55;font-size:14px}
-#stage{display:flex;flex-direction:column;align-items:center;height:100vh}
-#hud{display:flex;justify-content:space-between;align-items:center;width:100%;padding:0 28px;height:56px;font-size:24px;font-weight:800}
-#h1{color:#00f5ff;text-shadow:0 0 12px #00f5ff}#h2{color:#ff007f;text-shadow:0 0 12px #ff007f}
-canvas{background:#0a0a12}
-#cdn{position:fixed;inset:0;display:grid;place-items:center;font-size:220px;font-weight:900;text-shadow:0 0 50px #00f5ff;pointer-events:none}
-#over{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:#0a0a1266}
-#wt{font-size:84px;font-weight:900;text-shadow:0 0 30px currentColor}#sc{font-size:32px}
-#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#ff3b30;padding:12px 24px;border-radius:12px;z-index:5}
-#snd{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#ffffff22;padding:8px 20px;border-radius:99px;font-size:14px;backdrop-filter:blur(6px);z-index:5}
-</style></head><body>
-<div id="lobby">
-  <div class="logo">MIBS CONSOLE</div>
-  <div class="join"><div><small>ROOM CODE</small><div id="code">····</div><small id="url"></small></div><div id="qr"></div></div>
-  <div class="badges"><div id="b1" class="badge">P1 · waiting…</div><div id="b2" class="badge">P2 · waiting…</div></div>
-  <div id="grid"></div>
-  <button id="start" disabled>START GAME</button>
-  <div class="hint">Scan the QR code with two phones · ◀ ▶ choose a game · Enter starts · or use Player 1's phone</div>
-</div>
-<div id="stage" hidden><div id="hud"><span id="h1"></span><span id="ht"></span><span id="h2"></span></div><canvas id="cv"></canvas></div>
-<div id="cdn" hidden></div>
-<div id="over" hidden><div id="wt"></div><div id="sc"></div>
-  <div style="display:flex;gap:16px"><button id="again">PLAY AGAIN</button><button id="chg" style="background:#ff007f;color:#fff">CHANGE GAME</button></div>
-  <div class="hint">Player 1 can also pick on their phone · Enter = play again · Esc = change game</div></div>
-<div id="toast" hidden></div>
-<div id="snd">Click anywhere or press any key to enable TV Sound Effects</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module">
-import { GAME_REGISTRY as GR, W, H } from "./games.js";
-import { db, ref, get, set, update, onValue, onDisconnect, serverTimestamp } from "./firebase-config.js";
-const $ = s => document.querySelector(s), rnd = (a, b) => a + Math.random() * (b - a);
-const blank = () => ({ up: false, down: false, left: false, right: false, btnA: false, tapLeft: 0, tapRight: 0, tapA: 0 });
-
-// ---- Web Audio (unlocked by first gesture) ----
-const audio = (() => {
-  let ac;
-  const on = () => ac && ac.state === "running";
-  const unlock = () => { ac ||= new (window.AudioContext || window.webkitAudioContext)(); ac.resume().then(() => $("#snd").hidden = on()); };
-  ["pointerdown", "keydown"].forEach(t => addEventListener(t, unlock));
-  return {
-    beep(f, d = .1, type = "square", v = .12, to = f) {
-      if (!on()) return;
-      const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
-      o.type = type; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + d);
-      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
-      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
-    },
-    noise(d = .2, v = .2) {
-      if (!on()) return;
-      const n = ac.sampleRate * d | 0, b = ac.createBuffer(1, n, ac.sampleRate), a = b.getChannelData(0);
-      for (let i = 0; i < n; i++) a[i] = (Math.random() * 2 - 1) * (1 - i / n);
-      const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = b; g.gain.value = v; s.connect(g).connect(ac.destination); s.start();
-    },
-    fanfare() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.beep(f, .28, "triangle", .15), i * 140)); }
-  };
-})();
-
-// ---- Room ----
-const CH = "ABCDEFGHJKLMNPRSTUVWXYZ"; // no I, O, Q (digits excluded entirely)
-const mk = () => Array.from({ length: 4 }, () => CH[Math.random() * CH.length | 0]).join("");
-let code, rRef, R = {}, inputs = { p1: blank(), p2: blank() }, mode = "lobby", G, S, cd = 0, shown = -1, conf = [];
-const seen = {}, grid = $("#grid"), cv = $("#cv"), ctx = cv.getContext("2d");
-const inp = s => { const r = { ...blank(), ...R.inputs?.[s] }; if (!R.players?.[s]?.connected) Object.assign(r, { up: false, down: false, left: false, right: false, btnA: false }); return r; };
-const launch = () => { const p = R.players || {}; if (p.p1?.connected && p.p2?.connected) update(rRef, { status: "countdown", activeGame: GR[R.selectedLobbyIndex | 0].id, winner: null }); };
-const again = () => update(rRef, { status: "countdown", winner: null });
-const toLobbyDb = () => update(rRef, { status: "lobby", winner: null });
-let tt; const toast = m => { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 4500); };
-
-GR.forEach((g, i) => {
-  const d = document.createElement("div"); d.className = "card"; d.style.setProperty("--a", g.accentColor);
-  d.innerHTML = "<h2></h2><p></p>"; d.children[0].textContent = g.title; d.children[1].textContent = g.description;
-  d.onclick = () => update(rRef, { selectedLobbyIndex: i }); grid.append(d);
-});
-$("#start").onclick = launch; $("#again").onclick = again; $("#chg").onclick = toLobbyDb;
-addEventListener("keydown", e => {
-  const n = GR.length, i = R.selectedLobbyIndex | 0;
-  if (R.status === "lobby") {
-    if (e.key === "ArrowRight") update(rRef, { selectedLobbyIndex: (i + 1) % n });
-    if (e.key === "ArrowLeft") update(rRef, { selectedLobbyIndex: (i + n - 1) % n });
-    if (e.key === "Enter") launch();
-  } else if (R.status === "gameover") { if (e.key === "Enter") again(); if (e.key === "Escape") toLobbyDb(); }
-});
-
-function sync() {
-  const p = R.players || {}, i = R.selectedLobbyIndex | 0;
-  inputs = { p1: inp("p1"), p2: inp("p2") };
-  ["p1", "p2"].forEach((s, n) => {
-    const b = $("#b" + (n + 1)), on = !!p[s]?.connected;
-    b.textContent = `P${n + 1} · ` + (p[s] ? p[s].name + (on ? "" : " (offline)") : "waiting…"); b.classList.toggle("on", on);
-    if (seen[s] && !on && (R.status === "countdown" || R.status === "playing")) toast(`⚠ ${p[s]?.name || s.toUpperCase()} disconnected — waiting for them to return`);
-    seen[s] = on;
-  });
-  [...grid.children].forEach((c, n) => c.classList.toggle("sel", n === i));
-  $("#start").disabled = !(p.p1?.connected && p.p2?.connected);
-  $("#h1").textContent = `${p.p1?.name || "P1"} · ${R.scores?.p1 | 0}`; $("#h2").textContent = `${R.scores?.p2 | 0} · ${p.p2?.name || "P2"}`;
-  $("#ht").textContent = (GR.find(g => g.id === R.activeGame) || GR[0]).title;
-  if (R.status === "countdown" && mode !== "countdown") begin();
-  else if (R.status === "lobby" && mode !== "lobby") toLobby();
-}
-function begin() {
-  G?.cleanup?.(S);
-  G = GR.find(g => g.id === R.activeGame) || GR[0]; S = G.init(cv, R.players || {});
-  mode = "countdown"; cd = 3.6; shown = -1; conf = [];
-  $("#lobby").hidden = true; $("#stage").hidden = false; $("#over").hidden = true; fit();
-}
-function toLobby() {
-  G?.cleanup?.(S); G = S = null; mode = "lobby";
-  $("#lobby").hidden = false; $("#stage").hidden = true; $("#over").hidden = true; $("#cdn").hidden = true;
-}
-function finish(w) {
-  mode = "over";
-  const sc = { p1: (R.scores?.p1 | 0) + (w === "p1" ? 1 : 0), p2: (R.scores?.p2 | 0) + (w === "p2" ? 1 : 0) };
-  update(rRef, { status: "gameover", winner: w, scores: sc });
-  $("#wt").textContent = w === "draw" ? "DRAW!" : (R.players?.[w]?.name || w.toUpperCase()) + " WINS!";
-  $("#wt").style.color = w === "p1" ? "#00f5ff" : w === "p2" ? "#ff007f" : "#fff";
-  $("#sc").textContent = `${sc.p1} — ${sc.p2}`; $("#over").hidden = false; audio.fanfare();
-  if (w !== "draw") for (let i = 0; i < 220; i++) conf.push({ x: rnd(0, W), y: rnd(-H, 0), vx: rnd(-60, 60), vy: rnd(120, 360), c: ["#00f5ff", "#ff007f", "#fff", "#ffd400"][i % 4] });
-}
-function tick(dt) {
-  cd -= dt; const n = Math.max(0, Math.ceil(cd - .6));
-  if (n !== shown) {
-    shown = n; const c = $("#cdn"); c.hidden = false; c.textContent = n || "GO!"; c.style.color = n ? "#fff" : "#00ff88";
-    audio.beep(n ? 440 : 880, n ? .15 : .4, "square", .15);
-  }
-  if (cd <= 0) { mode = "play"; $("#cdn").hidden = true; update(rRef, { status: "playing" }); }
-}
-
-// ---- Canvas: 16:9 logical space scaled with devicePixelRatio ----
-function fit() {
-  const dpr = devicePixelRatio || 1, s = Math.min(innerWidth / W, (innerHeight - 56) / H);
-  cv.style.width = W * s + "px"; cv.style.height = H * s + "px"; cv.width = W * s * dpr; cv.height = H * s * dpr;
-  ctx.setTransform(s * dpr, 0, 0, s * dpr, 0, 0);
-}
-addEventListener("resize", fit); fit();
-let last = performance.now();
-(function loop(t) {
-  requestAnimationFrame(loop);
-  const dt = Math.min((t - last) / 1000, .05); last = t;
-  if (!G || mode === "lobby") return;
-  if (mode === "countdown") tick(dt);
-  else if (mode === "play") { const r = G.update(S, dt, inputs, audio); if (r?.winner) finish(r.winner); }
-  G.render(ctx, cv, S, R.players || {});
-  if (mode === "over") {
-    conf.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 220 * dt; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 8, 12); });
-    conf = conf.filter(p => p.y < H + 20);
-  }
-})(performance.now());
-
-// ---- Boot: collision-free code, auto-delete on tab close, QR ----
-(async () => {
-  for (;;) { code = mk(); if (!(await get(ref(db, "rooms/" + code))).exists()) break; }
-  rRef = ref(db, "rooms/" + code);
-  await onDisconnect(rRef).remove();
-  await set(rRef, { createdAt: serverTimestamp(), status: "lobby", activeGame: GR[0].id, selectedLobbyIndex: 0, scores: { p1: 0, p2: 0 }, inputs: { p1: blank(), p2: blank() } });
-  $("#code").textContent = code;
-  const url = new URL("controller.html?room=" + code, location.href).href;
-  $("#url").textContent = url.replace(/^https?:\/\//, "");
-  new QRCode($("#qr"), { text: url, width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
-  onValue(rRef, s => { if (s.exists()) { R = s.val(); sync(); } });
-})();
-</script>
-</body></html>
+body{min-height:100dvh;background:var(--bg);color:var(--ink);font:500 18px/1.35 Fredoka,system-ui,sans-serif;display:grid;place-items:center;padding:20px}
+main{width:min(100%,460px);display:flex;flex-direction:column;gap:18px}
+h1{font-size:42px;text-align:center;line-height:1.05}
+.sub{text-align:center}
+.card{background:#fff;border:3px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);padding:20px;display:flex;flex-direction:column;gap:12px;color:inherit;text-decoration:none}
+h2{font-size:22px}
+input{font:inherit;font-size:22px;padding:14px;border:3px solid var(--ink);border-radius:14px;text-align:center;width:100%}
+#room{text-transform:uppercase;letter-spacing:8px;font-size:28px}
+button{font:inherit;font-weight:700;font-size:22px;padding:14px;border:3px solid var(--ink);border-radius:16px;background:var(--p1);color:#fff;box-shadow:0 5px 0 var(--ink);cursor:pointer}
+button:active,.tv:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+.tv p{font-size:16px}
+</style></head><body><main>
+<h1>Mibs Console</h1>
+<p class="sub">Couch games for two. One screen, two phones.</p>
+<form class="card" id="f"><h2>📱 Play on this phone</h2>
+<input id="room" maxlength="4" placeholder="Room code" autocapitalize="characters" autocomplete="off" required>
+<input id="name" maxlength="12" placeholder="Your nickname" autocomplete="off">
+<button>Join game</button></form>
+<a class="card tv" href="tv.html"><h2>🖥️ Show the TV screen</h2><p>Open this on the TV or laptop. It shows the room code to type in.</p></a>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+$("#name").value = sessionStorage.name || "";
+$("#room").oninput = e => { e.target.value = e.target.value.replace(/[^a-z]/gi, "").toUpperCase(); if (e.target.value.length === 4) $("#name").focus(); };
+$("#f").onsubmit = e => { e.preventDefault(); sessionStorage.room = $("#room").value.trim().toUpperCase(); sessionStorage.name = $("#name").value.trim() || "Player"; location.href = "controller.html"; };
+</script></body></html>
