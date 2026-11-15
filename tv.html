@@ -70,7 +70,7 @@ canvas{border:3px solid var(--ink);border-radius:14px;background:#fff}
   <div style="display:flex;gap:16px"><button id="again">Play again</button><button id="chg">Change game</button></div>
   <div class="hint">Player 1 can also pick on their phone · Enter = play again · Esc = change game</div></div>
 <div id="toast" hidden></div>
-<div id="tools"><button id="mute" title="Sound on/off">🔊</button><button id="full" title="Fullscreen">⛶</button></div>
+<div id="tools"><button id="exit" title="Back to lobby (Esc)" hidden>Exit to lobby</button><button id="mute" title="Sound on/off">🔊</button><button id="full" title="Fullscreen">⛶</button></div>
 <div id="snd">Click anywhere or press any key to enable TV Sound Effects</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
@@ -112,7 +112,7 @@ let code, rRef, R = {}, inputs = { p1: blank(), p2: blank() }, mode = "lobby", G
 const seen = {}, grid = $("#grid"), cv = $("#cv"), ctx = cv.getContext("2d");
 const mkInputs = () => { inputs = { p1: inp("p1"), p2: inp("p2") }; };
 const inp = s => { const r = { ...blank(), ...R.inputs?.[s] }; if (!R.players?.[s]?.connected) Object.assign(r, { up: false, down: false, left: false, right: false, btnA: false }); return r; };
-const launch = () => { const p = R.players || {}; if (p.p1?.connected && p.p2?.connected) update(rRef, { status: "countdown", activeGame: GR[R.selectedLobbyIndex | 0].id, winner: null }); };
+const launch = () => { const p = R.players || {}; if (p.p1?.connected && p.p2?.connected) update(rRef, { status: "countdown", activeGame: (GR[R.selectedLobbyIndex | 0] || GR[0]).id, winner: null }); };
 const again = () => update(rRef, { status: "countdown", winner: null });
 const toLobbyDb = () => update(rRef, { status: "lobby", winner: null });
 let tt; const toast = m => { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 4500); };
@@ -122,7 +122,7 @@ GR.forEach((g, i) => {
   d.innerHTML = "<b></b><h2></h2><p></p>"; d.children[0].textContent = g.icon || "🎮"; d.children[1].textContent = g.title; d.children[2].textContent = g.description;
   d.onclick = () => update(rRef, { selectedLobbyIndex: i }); grid.append(d);
 });
-$("#start").onclick = launch; $("#again").onclick = again; $("#chg").onclick = toLobbyDb;
+$("#start").onclick = launch; $("#again").onclick = again; $("#chg").onclick = toLobbyDb; $("#exit").onclick = toLobbyDb;
 $("#mute").onclick = e => { audio.muted = !audio.muted; e.target.textContent = audio.muted ? "🔇" : "🔊"; };
 $("#full").onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
 addEventListener("keydown", e => {
@@ -131,7 +131,7 @@ addEventListener("keydown", e => {
     if (e.key === "ArrowRight") update(rRef, { selectedLobbyIndex: (i + 1) % n });
     if (e.key === "ArrowLeft") update(rRef, { selectedLobbyIndex: (i + n - 1) % n });
     if (e.key === "Enter") launch();
-  } else if (R.status === "gameover") { if (e.key === "Enter") again(); if (e.key === "Escape") toLobbyDb(); }
+  } else if (R.status === "countdown" || R.status === "playing") { if (e.key === "Escape") toLobbyDb(); } else if (R.status === "gameover") { if (e.key === "Enter") again(); if (e.key === "Escape") toLobbyDb(); }
 });
 
 function sync() {
@@ -150,15 +150,16 @@ function sync() {
   if (R.status === "countdown" && mode !== "countdown") begin();
   else if (R.status === "lobby" && mode !== "lobby") toLobby();
 }
+function crash(e) { console.error(e); toast("That game hit an error, so we went back to the lobby."); toLobbyDb(); toLobby(); }
 function begin() {
   G?.cleanup?.(S);
-  G = GR.find(g => g.id === R.activeGame) || GR[0]; S = G.init(cv, R.players || {});
+  G = GR.find(g => g.id === R.activeGame) || GR[0]; try { S = G.init(cv, R.players || {}); } catch (e) { return crash(e); }
   mode = "countdown"; cd = 3.6; shown = -1; conf = [];
-  $("#lobby").hidden = true; $("#stage").hidden = false; $("#over").hidden = true; fit();
+  $("#lobby").hidden = true; $("#stage").hidden = false; $("#over").hidden = true; $("#exit").hidden = false; fit();
 }
 function toLobby() {
   G?.cleanup?.(S); G = S = null; mode = "lobby";
-  $("#lobby").hidden = false; $("#stage").hidden = true; $("#over").hidden = true; $("#cdn").hidden = true;
+  $("#lobby").hidden = false; $("#stage").hidden = true; $("#over").hidden = true; $("#cdn").hidden = true; $("#exit").hidden = true;
 }
 function finish(w) {
   mode = "over";
@@ -186,8 +187,7 @@ function fit() {
 }
 addEventListener("resize", fit); fit();
 let last = performance.now();
-(function loop(t) {
-  requestAnimationFrame(loop);
+function frame(t) {
   const dt = Math.min((t - last) / 1000, .05); last = t;
   if (!G || mode === "lobby") return;
   if (mode === "countdown") tick(dt);
@@ -197,7 +197,8 @@ let last = performance.now();
     conf.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 220 * dt; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 8, 12); });
     conf = conf.filter(p => p.y < H + 20);
   }
-})(performance.now());
+}
+(function loop(t) { requestAnimationFrame(loop); try { frame(t); } catch (e) { crash(e); } })(performance.now());
 
 // ---- Boot: collision-free code, auto-delete on tab close, QR ----
 (async () => {
@@ -209,9 +210,14 @@ let last = performance.now();
   const url = new URL("controller.html?room=" + code, location.href).href;
   $("#url").textContent = (location.host + location.pathname.replace(/[^/]*$/, "")).replace(/\/$/, "");
   new QRCode($("#qr"), { text: url, width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
-  // One small listener per field: button presses (inputs) never trigger page updates or re-render the lobby.
-  ["status", "activeGame", "selectedLobbyIndex", "winner", "scores", "players"].forEach(k => onValue(ref(db, `rooms/${code}/${k}`), s => { R[k] = s.val(); sync(); }));
-  onValue(ref(db, `rooms/${code}/inputs`), s => { R.inputs = s.val() || {}; mkInputs(); });
+  // One listener for the whole room, so status and activeGame always arrive together (no stale game).
+  let sig = "";
+  onValue(rRef, s => {
+    if (!s.exists()) return;
+    R = s.val();
+    const n = JSON.stringify([R.status, R.activeGame, R.selectedLobbyIndex, R.winner, R.scores, R.players]);
+    if (n !== sig) { sig = n; sync(); } else mkInputs(); // button presses only refresh inputs
+  });
   navigator.wakeLock?.request("screen").catch(() => {});
 })();
 </script>
