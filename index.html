@@ -17,18 +17,28 @@ input{font:inherit;font-size:22px;padding:14px;border:3px solid var(--ink);borde
 button{font:inherit;font-weight:700;font-size:22px;padding:14px;border:3px solid var(--ink);border-radius:16px;background:var(--p1);color:#fff;box-shadow:0 5px 0 var(--ink);cursor:pointer}
 button:active,.tv:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
 .tv p{font-size:16px}
+#err{color:#b00020;font-weight:700;font-size:16px;text-align:center;min-height:1.2em}
 </style></head><body><main>
 <h1>Mibs Console</h1>
 <p class="sub">Couch games for two. One screen, two phones.</p>
 <form class="card" id="f"><h2>📱 Play on this phone</h2>
-<input id="room" maxlength="4" placeholder="Room code" autocapitalize="characters" autocomplete="off" required>
-<input id="name" maxlength="12" placeholder="Your nickname" autocomplete="off">
-<button>Join game</button></form>
+<input id="room" maxlength="4" placeholder="Room code" autocapitalize="characters" autocomplete="off" aria-label="Room code" required>
+<input id="name" maxlength="12" placeholder="Your nickname" autocomplete="off" aria-label="Your nickname">
+<button>Join game</button><div id="err" role="alert"></div></form>
 <a class="card tv" href="tv.html"><h2>🖥️ Show the TV screen</h2><p>Open this on the TV or laptop. It shows the room code to type in.</p></a>
 </main>
 <script>
 const $ = s => document.querySelector(s);
-$("#name").value = sessionStorage.name || "";
-$("#room").oninput = e => { e.target.value = e.target.value.replace(/[^a-z]/gi, "").toUpperCase(); if (e.target.value.length === 4) $("#name").focus(); };
-$("#f").onsubmit = e => { e.preventDefault(); sessionStorage.room = $("#room").value.trim().toUpperCase(); sessionStorage.name = $("#name").value.trim() || "Player"; location.href = "controller.html"; };
+const get = k => { try { return localStorage.getItem("mibs." + k); } catch { return null; } };
+const set = (k, v) => { try { localStorage.setItem("mibs." + k, v); sessionStorage.setItem("mibs." + k, v); } catch {} };
+$("#name").value = get("name") || "";
+$("#room").oninput = e => { e.target.value = e.target.value.replace(/[^a-z]/gi, "").toUpperCase(); $("#err").textContent = ""; if (e.target.value.length === 4) $("#name").focus(); };
+$("#f").onsubmit = e => {
+  e.preventDefault();
+  const room = $("#room").value.trim().toUpperCase();
+  if (!/^[A-Z]{4}$/.test(room)) { $("#err").textContent = "Enter the 4-letter room code shown on the TV."; $("#room").focus(); return; }
+  const name = $("#name").value.replace(/[<>]/g, "").trim().slice(0, 12) || "Player";
+  set("name", name);
+  location.href = "controller.html?room=" + room;
+};
 </script></body></html>
