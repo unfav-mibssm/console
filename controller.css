@@ -1,0 +1,60 @@
+:root{--ink:#1d1b2f;--bg:#ffd84d;--c:#2f6df6;--ok:#22c55e;--dp:min(64vh,40vw);--ab:min(50vh,30vw)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+html,body{background:var(--bg);color:var(--ink);font:500 18px/1.3 Fredoka,system-ui,sans-serif}
+body{height:100dvh;width:100vw;overflow:hidden;position:fixed;inset:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+#join,#app{height:100%;display:flex;flex-direction:column;gap:12px;padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#app{background-color:var(--c);color:#fff;background-image:radial-gradient(#ffffff26 2px,transparent 2.5px);background-size:26px 26px;position:relative}
+#join{justify-content:center;max-width:520px;margin:0 auto;width:100%}
+#join h1{text-align:center;font-size:34px}
+input{font:inherit;font-size:22px;padding:14px;border-radius:16px;border:3px solid var(--ink);background:#fff;color:var(--ink);text-align:center;user-select:text;-webkit-user-select:text;touch-action:auto}
+#room{text-transform:uppercase;letter-spacing:10px;font-size:30px}
+#err{color:#b00020;min-height:1.3em;text-align:center;font-weight:700;font-size:16px}
+@media(max-height:430px){#join{gap:8px}#join h1{font-size:24px}input{padding:8px;font-size:18px}#room{font-size:22px}}
+.top{display:flex;align-items:center;gap:8px;font-weight:700;flex:none}
+.top .grow{flex:1}
+#me{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34vw}
+#ping{font-size:14px;font-weight:500;opacity:.9;min-width:4.5em}
+.dot{width:12px;height:12px;border-radius:50%;background:#fde68a;border:2px solid var(--ink);flex:none}
+.dot.ok{background:#4ade80}.dot.bad{background:#f87171}
+.b{font:inherit;font-weight:700;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:20px;padding:14px;touch-action:none;box-shadow:0 6px 0 var(--ink);cursor:pointer}
+.b.on,.b:active:not(:disabled){transform:translateY(5px);box-shadow:0 1px 0 var(--ink)}
+.b:disabled{opacity:.4}
+.b.small{padding:5px 12px;font-size:14px;border-radius:12px;box-shadow:0 3px 0 var(--ink)}
+.b.small:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.go{background:var(--ok);font-size:28px}
+#go{background:var(--c);color:#fff;font-size:24px}
+.b:focus-visible,input:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
+#banner{position:absolute;left:50%;top:max(46px,calc(env(safe-area-inset-top) + 40px));transform:translateX(-50%);z-index:5;max-width:min(92vw,560px);text-align:center;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:14px;box-shadow:0 4px 0 var(--ink);padding:6px 16px;font-size:15px;font-weight:700}
+#view{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
+.card{padding:16px 20px;border:3px solid var(--ink);border-radius:20px;text-align:center;background:#fff;color:var(--ink);box-shadow:0 5px 0 var(--ink)}
+.card h1{font-size:28px}.card p{font-size:16px;margin-top:6px}.card small{opacity:.7}
+.card .keys{font-size:14px;opacity:.75;margin-top:8px}
+.row{display:flex;gap:12px}.row .b{flex:1}
+/* lobby + game over: stack in portrait, two columns in landscape */
+.lobby{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0;justify-content:center}
+.lobby>.card{flex:1;display:flex;flex-direction:column;justify-content:center}
+.side{display:flex;flex-direction:column;gap:12px;justify-content:center}
+@media(orientation:landscape){.lobby{flex-direction:row;align-items:stretch}.lobby>.card{flex:1.3}.side{flex:1}}
+@media(max-height:430px){.card{padding:10px 14px}.card h1{font-size:22px}.card p{font-size:14px}.go{font-size:22px}.b{padding:10px}}
+/* ---------- the one controller used by every game ---------- */
+.pad{flex:1;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:0;padding:0 2vw}
+.dpad{position:relative;flex:none;width:var(--dp);height:var(--dp);border-radius:50%;background:#fff;color:var(--ink);border:4px solid var(--ink);box-shadow:0 8px 0 var(--ink);touch-action:none}
+.dpad:before,.dpad:after{content:"";position:absolute;background:#1d1b2f14;border-radius:99px}
+.dpad:before{left:34%;right:34%;top:6%;bottom:6%}.dpad:after{top:34%;bottom:34%;left:6%;right:6%}
+.ar{position:absolute;width:30%;height:30%;display:grid;place-items:center;font-style:normal;font-size:calc(var(--dp)*.15);border-radius:50%;z-index:1;transition:background .05s,color .05s}
+.ar.up{left:35%;top:5%}.ar.down{left:35%;bottom:5%}.ar.left{left:5%;top:35%}.ar.right{right:5%;top:35%}
+.ar.on{background:var(--ink);color:#fff}
+.hub{position:absolute;left:50%;top:50%;width:26%;height:26%;margin:-13%;border-radius:50%;background:var(--ink);border:3px solid #fff;box-shadow:0 0 0 3px var(--ink);transform:translate(var(--hx,0),var(--hy,0));transition:transform .04s}
+.mid{flex:1;min-width:0;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;background:#ffffffee;color:var(--ink);border:3px solid var(--ink);border-radius:18px;padding:8px 10px;box-shadow:0 4px 0 var(--ink)}
+.mid .gi{font-size:30px;line-height:1}.mid .gn{font-weight:700;font-size:17px}.mid .gh{font-size:13px;opacity:.8}.mid .gs{font-size:13px;font-weight:700;color:var(--c)}
+.abtn{flex:none;width:var(--ab);height:var(--ab);border-radius:50%;font:inherit;font-weight:700;font-size:calc(var(--ab)*.42);line-height:1;color:var(--ink);background:#fff;border:5px solid var(--ink);box-shadow:0 9px 0 var(--ink);touch-action:none;display:grid;place-items:center;align-content:center}
+.abtn small{display:block;font-size:calc(var(--ab)*.14);font-weight:500;opacity:.75;min-height:1.1em}
+.abtn.on{transform:translateY(7px);box-shadow:0 2px 0 var(--ink);background:var(--ink);color:#fff}
+@media(max-height:360px){.mid .gh{display:none}}
+#rotate{display:none;position:fixed;inset:0;z-index:50;background:var(--ink);color:#fff;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px}
+#rotate b{font-size:64px;line-height:1;animation:spin 2.4s ease-in-out infinite}
+@keyframes spin{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media(orientation:portrait){body.ingame #rotate{display:flex}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
