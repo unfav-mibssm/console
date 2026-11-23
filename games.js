@@ -25,7 +25,17 @@ export const GAMES = [
   { id: "tank-duel", icon: "🎯", title: "Tank Duel", accentColor: "#a855f7", dir: 8, uses: ["up", "down", "left", "right", "a"],
     description: "Drive with the D-pad, fire with A. Shots bounce once. First to 3 rounds wins.", a: "Fire", move: "D-pad drives" },
   { id: "bomber-arena", icon: "💣", title: "Bomber Arena", accentColor: "#eab308", dir: 4, uses: ["up", "down", "left", "right", "a"],
-    description: "Walk with the D-pad, drop bombs with A. Blast blocks and your rival. Best of 3.", a: "Bomb", move: "D-pad walks" }
+    description: "Walk with the D-pad, drop bombs with A. Blast blocks and your rival. Best of 3.", a: "Bomb", move: "D-pad walks" },
+  { id: "sword-duel", icon: "⚔️", title: "Sword Duel", accentColor: "#ef4444", dir: 8, uses: ["up", "down", "left", "right", "a"],
+    description: "Run, jump (twice!) and slash. Every hit sends your rival flying further. Knock them off the stage 3 times.", a: "Slash", move: "◀ ▶ run, ▲ jump" },
+  { id: "snake-showdown", icon: "🐍", title: "Snake Showdown", accentColor: "#22c55e", dir: 4, uses: ["up", "down", "left", "right", "a"],
+    description: "Eat apples to grow. Crash into a wall or a snake and you lose. Hold A to boost (it costs tail).", a: "Boost", move: "D-pad steers" },
+  { id: "paint-wars", icon: "🎨", title: "Paint Wars", accentColor: "#ec4899", dir: 8, uses: ["up", "down", "left", "right", "a"],
+    description: "Run around and paint the floor your colour. Press A for a big splat. Most floor after 60 seconds wins.", a: "Splat", move: "D-pad runs" },
+  { id: "hot-potato", icon: "💥", title: "Hot Potato", accentColor: "#f97316", dir: 8, uses: ["up", "down", "left", "right", "a"],
+    description: "Touch your rival to pass the bomb. Whoever holds it when the fuse ends blows up. First to 3 points.", a: "Dash", move: "D-pad runs" },
+  { id: "dodgeball", icon: "🏐", title: "Dodgeball", accentColor: "#0ea5e9", dir: 8, uses: ["up", "down", "left", "right", "a"],
+    description: "Grab a ball and throw it. With empty hands, A is a catch: time it right and the ball is yours. 5 lives each.", a: "Throw/Catch", move: "D-pad moves" }
 ];
 export const GAME_IDS = GAMES.map(g => g.id);
 export const gameById = id => GAMES.find(g => g.id === id);
