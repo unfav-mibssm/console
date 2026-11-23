@@ -39,6 +39,11 @@ If your phone disconnects for a moment, don't worry. The game waits for you and 
 | 🏒 Air Hockey | Slide your mallet, hold **A** to boost. First to 5 goals. |
 | 🎯 Tank Duel | Drive with the D-pad, fire with **A**. Shots bounce once. First to 3 rounds. |
 | 💣 Bomber Arena | Walk, drop bombs with **A**, blast blocks and your rival. Best of 3. |
+| ⚔️ Sword Duel | Run, jump (twice!) and slash with **A**. Every hit sends your rival flying further. Knock them off the stage 3 times. |
+| 🐍 Snake Showdown | Steer with the D-pad and eat apples to grow. Hit a wall or any snake and you lose. Hold **A** to boost (it costs a bit of tail). |
+| 🎨 Paint Wars | Run around and paint the floor your colour. Press **A** for a big splat. Most floor after 60 seconds wins. |
+| 💥 Hot Potato | Touch your rival to pass the bomb. Whoever holds it when the fuse ends blows up. **A** dashes. First to 3 points. |
+| 🏐 Dodgeball | Grab a ball and throw it with **A**. With empty hands, **A** is a catch: time it right and the ball is yours. 5 lives each. |
 
 ## Tips
 
