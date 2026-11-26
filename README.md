@@ -44,6 +44,11 @@ If your phone disconnects for a moment, don't worry. The game waits for you and 
 | 🎨 Paint Wars | Run around and paint the floor your colour. Press **A** for a big splat. Most floor after 60 seconds wins. |
 | 💥 Hot Potato | Touch your rival to pass the bomb. Whoever holds it when the fuse ends blows up. **A** dashes. First to 3 points. |
 | 🏐 Dodgeball | Grab a ball and throw it with **A**. With empty hands, **A** is a catch: time it right and the ball is yours. 5 lives each. |
+| 🏎️ Turbo Rally | A 3D race, split screen. The car drives itself: steer ◀ ▶, brake ▼, hold **A** for nitro. Grab glowing orbs for nitro, dodge cones and barrels. 3 laps. |
+| 🔫 Maze Blasters | First-person neon maze. ◀ ▶ turn, ▲ ▼ walk, **A** shoots. Pick up health, watch the little radar. First to 5 frags wins. |
+| 🚀 Gravity Duel | Spaceships fighting around a star that pulls everything in. ◀ ▶ rotate, ▲ thrust, **A** shoots, ▼ warps. Don't fall into the star. First to 5 kills. |
+| 💥 Crater Wars | Artillery on hills that get blown apart. ▲ ▼ aim, ◀ ▶ drive, hold **A** to charge and let go to fire. Watch the wind arrow. Best of 3 rounds. |
+| 🏖️ Beach Volley | Blob volleyball at sunset. ◀ ▶ move, ▲ jump, **A** smashes (hold ◀ or ▶ to aim it). Three touches max per side. First to 7. |
 
 ## Tips
 
