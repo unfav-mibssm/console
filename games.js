@@ -4,7 +4,7 @@
 //   1. Create games/<id>.js exporting default { init(cv, players), update(state, dt, inp, audio), render(ctx, cv, state, players), cleanup(state) }
 //      (copy games/tug-of-war.js as a starting point). update() returns { winner: "p1" | "p2" | "draw" } when the match is over.
 //   2. Add one entry below.
-//   3. Add the same id to the activeGame list in database.rules.json and publish the rules again.
+//   3. Nothing to change in database.rules.json: it accepts any id made of lowercase letters, digits and dashes (3-24 characters).
 //
 // Per game:  a = what the A button does (shown on the phone)   move = what the D-pad does (shown on the phone)
 //            dir = 4 (D-pad gives one direction at a time) or 8 (diagonals allowed)
@@ -35,7 +35,17 @@ export const GAMES = [
   { id: "hot-potato", icon: "💥", title: "Hot Potato", accentColor: "#f97316", dir: 8, uses: ["up", "down", "left", "right", "a"],
     description: "Touch your rival to pass the bomb. Whoever holds it when the fuse ends blows up. First to 3 points.", a: "Dash", move: "D-pad runs" },
   { id: "dodgeball", icon: "🏐", title: "Dodgeball", accentColor: "#0ea5e9", dir: 8, uses: ["up", "down", "left", "right", "a"],
-    description: "Grab a ball and throw it. With empty hands, A is a catch: time it right and the ball is yours. 5 lives each.", a: "Throw/Catch", move: "D-pad moves" }
+    description: "Grab a ball and throw it. With empty hands, A is a catch: time it right and the ball is yours. 5 lives each.", a: "Throw/Catch", move: "D-pad moves" },
+  { id: "turbo-rally", icon: "🏎️", title: "Turbo Rally", accentColor: "#f97316", dir: 8, uses: ["down", "left", "right", "a"],
+    description: "A 3D race on a split screen. Cars drive themselves: steer with ◀ ▶, brake with ▼, hold A for nitro. Grab glowing orbs, dodge cones. 3 laps.", a: "Nitro", move: "◀ ▶ steer, ▼ brake" },
+  { id: "maze-blasters", icon: "🔫", title: "Maze Blasters", accentColor: "#a855f7", dir: 8, uses: ["up", "down", "left", "right", "a"],
+    description: "First-person neon maze hunt. ◀ ▶ turn, ▲ ▼ walk, A shoots. Grab health, check the radar. First to 5 frags.", a: "Shoot", move: "◀ ▶ turn, ▲ ▼ walk" },
+  { id: "gravity-duel", icon: "🚀", title: "Gravity Duel", accentColor: "#06b6d4", dir: 8, uses: ["up", "down", "left", "right", "a"],
+    description: "Space duel around a star that pulls everything. ◀ ▶ rotate, ▲ thrust, A shoots, ▼ warps. Don't fall in. First to 5 kills.", a: "Shoot", move: "◀ ▶ turn, ▲ thrust, ▼ warp" },
+  { id: "crater-wars", icon: "💥", title: "Crater Wars", accentColor: "#ef4444", dir: 8, uses: ["up", "down", "left", "right", "a"],
+    description: "Artillery on destructible hills. ▲ ▼ aim, ◀ ▶ drive, hold A to charge and release to fire. Watch the wind. Best of 3.", a: "Hold = charge, release = fire", move: "▲ ▼ aim, ◀ ▶ drive" },
+  { id: "beach-volley", icon: "🏖️", title: "Beach Volley", accentColor: "#eab308", dir: 8, uses: ["up", "left", "right", "a"],
+    description: "Blob volleyball at sunset. ◀ ▶ move, ▲ jump, A smashes (aim with ◀ ▶). Three touches max. First to 7.", a: "Smash", move: "◀ ▶ move, ▲ jump" }
 ];
 export const GAME_IDS = GAMES.map(g => g.id);
 export const gameById = id => GAMES.find(g => g.id === id);
